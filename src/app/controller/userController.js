@@ -2,19 +2,33 @@ import { userDataModel } from "../models/userModel.js";
 
 export const createUserData = async (req, res) => {
     try {
-        const {
-            email,
-            number
-        } = req.body;
+        const { name, email, number } = req.body;
+
+        if (!name || !email || !number) {
+            return res.status(422).json({ error: 'Please fill in all fields properly' });
+        }
+
+        // Check if either email or number already exists
+        const userExist = await userDataModel.findOne({ $or: [{ email }, { number }] });
+
+        if (userExist) {
+            // Determine if the duplicate is due to email or number
+            const duplicateField = userExist.email === email ? 'email' : 'number';
+            return res.status(400).json({
+                success: false,
+                message: `The ${duplicateField} already exists. Please use a different ${duplicateField}.`
+            });
+        }
 
         const newUserData = await new userDataModel({
+            name,
             email,
             number
         }).save();
 
         res.status(201).send({
             success: true,
-            message: 'Room Created Successfully',
+            message: 'User Created Successfully',
             userData: newUserData,
         });
 
@@ -22,7 +36,7 @@ export const createUserData = async (req, res) => {
         console.error(error);
         res.status(500).send({
             success: false,
-            message: 'Error in Room Creation',
+            message: 'Error in User Creation',
             error,
         });
     }
